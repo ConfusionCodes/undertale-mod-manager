@@ -4,6 +4,7 @@ use eframe::{
     CreationContext,
     egui::{FontFamily, FontId, ImageSource, TextStyle, Ui, Vec2, include_image, vec2},
 };
+use egui::{Color32, Stroke, widget_style::SeparatorStyle};
 
 #[macro_export]
 macro_rules! set_font {
@@ -36,8 +37,18 @@ macro_rules! set_font {
 
 pub const DEFAULT_IMAGE: ImageSource<'static> = include_image!("../assets/heart_256.ico");
 pub const TILE_SIZE: Vec2 = vec2(128.0, 128.0);
+pub const BUTTON_BORDER_WIDTH: f32 = 4.;
+pub const BUTTON_PADDING: Vec2 = Vec2::splat(BUTTON_BORDER_WIDTH * 4.);
 pub const MOD_TILE_IMAGE_PADDING: f32 = 16.0;
+pub const SEPARATOR_STYLE: SeparatorStyle = SeparatorStyle {
+    spacing: 8.0,
+    stroke: Stroke {
+        width: 8.0,
+        color: Color32::RED,
+    },
+};
 
+pub const INFO_PANEL_BOTTOM_HEIGHT: f32 = 32.;
 pub const INFO_PANEL_WIDTH: f32 = 192.0;
 
 const FONT_SIZE_DIFFERENCE: f32 = 0.70;

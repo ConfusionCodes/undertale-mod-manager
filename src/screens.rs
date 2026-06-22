@@ -4,6 +4,7 @@ use eframe::egui::{
     Align2, Area, Button, CentralPanel, Color32, Frame, Grid, Image, Key, Layout, Margin, Order,
     Panel, ProgressBar, ScrollArea, Sense, Shadow, TextEdit, TextStyle, Ui, Vec2, Widget,
 };
+use egui::{Separator, Stroke};
 
 use crate::{
     ModManager, Progress,
@@ -234,39 +235,61 @@ fn icon_menu(
 ) {
     let mut open = true;
     let area_size = style::popup_size(ui);
+    let bottom_size = style::INFO_PANEL_BOTTOM_HEIGHT;
     popup(ui, open_flag, |ui| {
-        ui.set_min_size(area_size);
-        ui.with_layout(Layout::bottom_up(egui::Align::Min), |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Open Folder");
-                ui.label("Lorem");
-                ui.label("Ipsum");
-            });
-            ScrollArea::vertical().show(ui, |ui| {
-                ui.vertical(|ui| {
-                    Grid::new("icons").show(ui, |ui| {
-                        let default_image = Image::new(style::DEFAULT_IMAGE)
-                            .fit_to_exact_size(style::TILE_SIZE)
+        ui.set_width(area_size.x);
+        ui.set_height(area_size.y);
+        ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .max_height(area_size.y - bottom_size)
+            .max_width(area_size.x)
+            .show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    let default_image = Image::new(style::DEFAULT_IMAGE)
+                        .max_size(style::TILE_SIZE - style::BUTTON_PADDING)
+                        .fit_to_exact_size(style::TILE_SIZE - style::BUTTON_PADDING)
+                        .maintain_aspect_ratio(true);
+
+                    ui.style_mut().spacing.button_padding = Vec2::new(0., 0.);
+                    ui.style_mut().visuals.widgets.hovered.bg_stroke =
+                        Stroke::new(style::BUTTON_BORDER_WIDTH, Color32::YELLOW);
+                    ui.style_mut().visuals.widgets.inactive.bg_stroke =
+                        Stroke::new(style::BUTTON_BORDER_WIDTH, Color32::ORANGE);
+                    let button = Button::new(default_image)
+                        .min_size(style::TILE_SIZE)
+                        .corner_radius(0)
+                        .fill(Color32::TRANSPARENT)
+                        .ui(ui);
+
+                    if button.clicked() {
+                        selected_mod.image_path = None;
+                        open = false;
+                    }
+                    for icon in files.get_icons() {
+                        let icon_image = Image::new(FileManager::get_image(&icon))
+                            .max_size(style::TILE_SIZE - style::BUTTON_PADDING)
+                            .fit_to_exact_size(style::TILE_SIZE - style::BUTTON_PADDING)
                             .maintain_aspect_ratio(true);
-
-                        if Button::new(default_image).ui(ui).clicked() {
-                            selected_mod.image_path = None;
+                        let button = Button::new(icon_image)
+                            .min_size(style::TILE_SIZE)
+                            .corner_radius(0)
+                            .fill(Color32::TRANSPARENT)
+                            // .frame(false)
+                            .ui(ui);
+                        if button.clicked() {
+                            selected_mod.image_path = Some(icon);
                             open = false;
-                        }
-                        for icon in files.get_icons() {
-                            let icon_image = Image::new(FileManager::get_image(&icon))
-                                .fit_to_exact_size(style::TILE_SIZE)
-                                .maintain_aspect_ratio(true);
-                            if Button::new(icon_image).ui(ui).clicked() {
-                                selected_mod.image_path = Some(icon);
-                                open = false;
-                            };
-                        }
-                    });
+                        };
+                    }
                 });
-
-                //
             });
+        ui.visuals_mut().widgets.noninteractive.bg_stroke = style::SEPARATOR_STYLE.stroke;
+        let margin = ui.style().spacing.menu_margin;
+        ui.add(Separator::default().grow(margin.leftf() + margin.rightf()));
+        ui.horizontal_centered(|ui| {
+            if ui.button("Open Folder").clicked() {
+                files.show_icon_dir();
+            };
         });
     });
     *open_flag = open;

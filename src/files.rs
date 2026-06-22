@@ -119,12 +119,12 @@ pub struct FileManager {
 impl FileManager {
     pub fn new() -> Self {
         Self {
-            icon_dir: Self::get_or_create_dir("./icons/"),
-            mod_dir: Self::get_or_create_dir("./mods/"),
-            vanilla_dir: Self::get_or_create_dir("./vanilla/"),
-            temp_dir: Self::get_or_create_dir("./temp/"),
-            main_config: Path::new("./config.toml"),
-            instance_config: Path::new("./instance.toml"),
+            icon_dir: Self::get_or_create_dir(".\\icons\\"),
+            mod_dir: Self::get_or_create_dir(".\\mods\\"),
+            vanilla_dir: Self::get_or_create_dir(".\\vanilla\\"),
+            temp_dir: Self::get_or_create_dir(".\\temp\\"),
+            main_config: Path::new(".\\config.toml"),
+            instance_config: Path::new(".\\instance.toml"),
         }
     }
     fn get_or_create_dir(string: &'static str) -> &'static Path {
