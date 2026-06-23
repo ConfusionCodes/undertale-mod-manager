@@ -54,6 +54,7 @@ impl ModManager {
         } else {
             Self::copy_vanilla_files(progress.clone(), files);
         }
+
         let mut config = ConfigFile::load(&files).unwrap_or_else(|err| {
             println!("Could not load config file. Creating new one: {err}");
             let config = ConfigFile::default();

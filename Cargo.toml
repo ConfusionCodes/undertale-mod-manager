@@ -1,7 +1,11 @@
 [package]
 name = "undertale_mod_manager"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2024"
+
+[[bin]]
+name = "instxller"
+path = "src/installer.rs"
 
 [dependencies]
 egui = {version = "0.34.3", features = ["serde"]}
@@ -16,3 +20,5 @@ toml = "1.1.2"
 thiserror = "2.0.18"
 lnk = "0.6.4"
 zip = "8.6.0"
+self_update = "0.44.0"
+reqwest = {version = "0.13.4", features = ["json"]}
