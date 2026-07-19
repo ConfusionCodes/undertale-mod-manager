@@ -4,7 +4,7 @@ use std::{
 };
 
 use eframe::{App, NativeOptions, icon_data};
-use egui::{Button, Color32, Layout, RichText, Vec2, ViewportBuilder};
+use egui::{Button, Color32, Layout, ProgressBar, RichText, Vec2, ViewportBuilder, Widget};
 use smol::{Executor, Task, channel::Receiver};
 
 use crate::text::ALREADY_INSTALLED;
@@ -17,8 +17,9 @@ const SUBFOLDER_NAME: &str = "UndertaleModManager";
 
 #[derive(Debug)]
 struct InstallerState {
-    rx: Option<Receiver<u64>>,
+    rx: Option<Receiver<f32>>,
     task: Option<Task<Result<(), http::Error>>>,
+    progress: f32,
 
     create_shortcut: bool,
     install_path: String,
@@ -40,6 +41,7 @@ impl InstallerState {
         Box::new(Self {
             rx: None,
             task: None,
+            progress: 0.0,
 
             create_shortcut: true,
             install_path: initial_path,
@@ -54,7 +56,24 @@ impl InstallerState {
     }
 }
 impl App for InstallerState {
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if let Some(ref task) = self.task
+            && let Some(ref rx) = self.rx
+        {
+            if task.is_finished()
+                && let Some(task) = self.task.take()
+            {
+                let result = smol::block_on(task);
+                ui.label(format!("{result:?}"));
+            }
+            if let Ok(progress) = rx.try_recv() {
+                self.progress = progress;
+            }
+            ui.label("Installing... Please wait.");
+            ProgressBar::new(self.progress).ui(ui);
+            return;
+        }
+
         ui.label(text::WELCOME);
 
         ui.checkbox(&mut self.create_shortcut, text::SHORTCUT);
@@ -95,6 +114,9 @@ impl App for InstallerState {
             };
             let install_button = ui.add_enabled(!self.block_install, Button::new(install_text));
             if install_button.clicked() {
+                let (task, rx) = http::start_download(path);
+                self.task = Some(task);
+                self.rx = Some(rx);
                 // let result = install(&path);
                 // println!("{result:?}");
             }

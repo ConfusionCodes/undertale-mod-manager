@@ -2,7 +2,7 @@ use std::{
     fmt::Display,
     fs::{File, OpenOptions},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
@@ -66,9 +66,8 @@ impl JsonFind for Value {
     }
 }
 
-fn start_download(state: &InstallerState, path: &Path) -> (Task<Result<(), Error>>, Receiver<f32>) {
+pub fn start_download(path: PathBuf) -> (Task<Result<(), Error>>, Receiver<f32>) {
     //
-    let path = path.to_path_buf();
     let (tx, rx) = unbounded();
     let task: Task<Result<(), Error>> = smol::spawn(async move {
         let client = Client::new();
