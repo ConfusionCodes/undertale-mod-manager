@@ -1,12 +1,12 @@
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     fs::{self, read_dir},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
-use eframe::egui::{Color32, ImageSource, ahash::HashMap};
-use egui::ahash::HashMapExt;
+use eframe::egui::{Color32, ImageSource};
 use fs_extra::dir::CopyOptions;
 use image::{GenericImageView, ImageReader, ImageResult};
 use lnk::ShellLink;

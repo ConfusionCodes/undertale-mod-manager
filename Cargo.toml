@@ -5,20 +5,21 @@ edition = "2024"
 
 [[bin]]
 name = "instxller"
-path = "src/installer.rs"
+path = "installer_src/main.rs"
 
 [dependencies]
-egui = {version = "0.34.3", features = ["serde"]}
-eframe = "0.34.3"
-egui_extras = {version = "0.34.3", features = ["all_loaders"]}
-image = {version = "0.25", features = ["ico", "png", "jpeg"]}
+egui = {version = "0.35.0", features = ["serde"]}
+eframe = "0.35.0"
+egui_extras = {version = "0.35.0", features = ["all_loaders"]}
+image = {version = "0.25.10", features = ["ico", "png", "jpeg"]}
 ico = "0.5.0"
 xdelta3 = {path = "../xdelta3"}
 fs_extra = "1.3.0"
-serde = { version = "1.0.228", features = ["derive"] }
-toml = "1.1.2"
-thiserror = "2.0.18"
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.1.3+spec-1.1.0"
+thiserror = "2.0.19"
 lnk = "0.6.4"
 zip = "8.6.0"
 self_update = "0.44.0"
 reqwest = {version = "0.13.4", features = ["json"]}
+serde_json = "1.0.150"

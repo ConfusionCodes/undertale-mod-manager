@@ -5,13 +5,21 @@ use std::{
     sync::Arc,
 };
 
-use eframe::{NativeOptions, icon_data};
+use eframe::{App, NativeOptions, icon_data};
 use egui::{Button, Color32, Layout, RichText, Vec2, ViewportBuilder};
 use reqwest::{Response, StatusCode};
 
 const WINDOW_SIZE: Vec2 = Vec2::new(300.0, 350.0);
 const RELEASE_URL: &str =
     r"https://api.github.com/repos/ConfusionCodes/undertale-mod-manager/releases/latest";
+
+#[derive(Debug, Default)]
+struct InstallerState {}
+impl App for InstallerState {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        todo!()
+    }
+}
 
 fn main() -> eframe::Result {
     let default_path = env::var_os("APPDATA")
@@ -20,12 +28,25 @@ fn main() -> eframe::Result {
         .or(std::env::home_dir());
     let initial_path = default_path.map_or(String::new(), |p| p.to_string_lossy().into_owned());
     let icon = icon_data::from_png_bytes(include_bytes!("../assets/logo.png"));
+    // eframe::run_native(
+    //     "Undertale Mod Manager Installer",
+    //     NativeOptions {
+    //         viewport: ViewportBuilder::default()
+    //             .with_inner_size(WINDOW_SIZE)
+    //             .with_icon(icon.unwrap_or_default())
+    //             .with_maximize_button(false),
+    //         // .with_resizable(false),
+    //         ..NativeOptions::default()
+    //     },
+    //     Box::new(|x| Ok(Box::new(InstallerState::default()))),
+    // );
+
     eframe::run_ui_native(
         "Undertale Mod Manager Installer",
         NativeOptions {
             viewport: ViewportBuilder::default()
                 .with_inner_size(WINDOW_SIZE)
-                .with_icon(icon.unwrap_or_default())
+                // .with_icon(icon.unwrap_or_default())
                 .with_maximize_button(false),
             // .with_resizable(false),
             ..NativeOptions::default()
@@ -79,12 +100,12 @@ fn main() -> eframe::Result {
                     block_install = true;
                 }
             }
-
-            ui.with_layout(Layout::right_to_left(egui::Align::Max), |ui| {
+            ui.with_layout(Layout::right_to_left(egui::Align::Max), move |ui| {
                 let install_button = ui.add_enabled(!block_install, Button::new("Install"));
                 if install_button.clicked() {
                     ui.memory_mut(|mem| mem.data.insert_temp("install".into(), true));
-                    // install_new_version();
+                    let result = install(&full_path);
+                    println!("{result:?}");
                 }
                 if ui.button("Cancel").clicked() {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
@@ -94,16 +115,39 @@ fn main() -> eframe::Result {
     )
 }
 
-struct ReleaseInfo {}
-
-async fn install(path: &Path) -> Result<(), reqwest::Error> {
-    let client = reqwest::Client::new();
-    let response = client.get(RELEASE_URL).send().await?;
+fn install(path: &Path) -> Result<(), reqwest::Error> {
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(RELEASE_URL)
+        .header("Accept", "application/json")
+        .header("User-Agent", "Undertale-Mod-Manager-Installer")
+        .send()?;
     if response.status() != StatusCode::OK && response.status() != StatusCode::FOUND {
-        eprintln!("Could not find resource.")
+        eprintln!("Could not find resource.");
+        return Ok(());
     }
-    let data = response.text().await?;
-    println!("data: {data}");
+    let data = response.text()?;
+    let result: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&data);
+    let Ok(value) = result else {
+        eprintln!("Could not deserialize data.");
+        return Ok(());
+    };
+    let asset = &value["assets"][1]["url"];
+    let serde_json::Value::String(asset) = asset else {
+        eprintln!("Data was not a string.");
+        return Ok(());
+    };
+    let response = client
+        .get(asset)
+        .header("Accept", "application/octet-stream")
+        .header("User-Agent", "Undertale-Mod-Manager-Installer")
+        .send()?;
+    if response.status() != StatusCode::OK && response.status() != StatusCode::FOUND {
+        eprintln!("Could not find resource 2.");
+        return Ok(());
+    }
+    let bytes = response.bytes()?;
+    let _ = std::fs::write("test.exe", bytes);
 
     Ok(())
 }
