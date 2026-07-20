@@ -5,9 +5,7 @@ use std::{
 
 use eframe::{App, NativeOptions, icon_data};
 use egui::{Button, Color32, Layout, ProgressBar, RichText, Vec2, ViewportBuilder, Widget};
-use smol::{Executor, Task, channel::Receiver};
-
-use crate::text::ALREADY_INSTALLED;
+use smol::{Task, channel::Receiver};
 
 mod http;
 mod text;
@@ -23,7 +21,6 @@ struct InstallerState {
 
     create_shortcut: bool,
     install_path: String,
-    block_install: bool,
     already_installed: bool,
 }
 impl InstallerState {
@@ -45,7 +42,6 @@ impl InstallerState {
 
             create_shortcut: true,
             install_path: initial_path,
-            block_install: false,
             already_installed: false,
         })
     }
@@ -64,13 +60,21 @@ impl App for InstallerState {
                 && let Some(task) = self.task.take()
             {
                 let result = smol::block_on(task);
-                ui.label(format!("{result:?}"));
+                eprintln!("{result:?}");
+            }
+            match rx.try_recv() {
+                Ok(progress) => self.progress = progress,
+                Err(err) => eprintln!("Could not fetch progress: {}", err),
             }
             if let Ok(progress) = rx.try_recv() {
                 self.progress = progress;
+                println!("Progress: {progress}");
             }
             ui.label("Installing... Please wait.");
-            ProgressBar::new(self.progress).ui(ui);
+            ProgressBar::new(self.progress)
+                .animate(true)
+                .show_percentage()
+                .ui(ui);
             return;
         }
 
@@ -82,9 +86,10 @@ impl App for InstallerState {
         ui.text_edit_singleline(&mut self.install_path);
         let (path, base_exists) = self.get_install_path();
 
+        let mut block_install = false;
         if !base_exists {
             ui.label(RichText::new(text::UNKNOWN_PATH).color(Color32::RED));
-            self.block_install = true;
+            block_install = true;
         } else {
             if let Ok(files) = path.read_dir() {
                 let files: Vec<_> = files.filter_map(|f| f.ok()).collect();
@@ -92,19 +97,15 @@ impl App for InstallerState {
                     .iter()
                     .any(|entry| entry.file_name() == "undertale_mod_manager.exe")
                 {
-                    ui.label(RichText::new(ALREADY_INSTALLED).color(Color32::YELLOW));
                     self.already_installed = true;
                 }
             } else {
-                eprintln!(
-                    "Path '{}' was not found/not a directory, and was not caught earlier.",
-                    path.display()
-                );
+                self.already_installed = false;
             }
         }
 
         if self.already_installed {
-            ui.label(RichText::new(ALREADY_INSTALLED).color(Color32::YELLOW));
+            ui.label(RichText::new(text::ALREADY_INSTALLED).color(Color32::YELLOW));
         }
         ui.with_layout(Layout::right_to_left(egui::Align::Max), |ui| {
             let install_text = if self.already_installed {
@@ -112,8 +113,13 @@ impl App for InstallerState {
             } else {
                 text::INSTALL
             };
-            let install_button = ui.add_enabled(!self.block_install, Button::new(install_text));
+            let install_button = ui.add_enabled(!block_install, Button::new(install_text));
             if install_button.clicked() {
+                if !path.exists()
+                    && let Err(err) = std::fs::create_dir(&path)
+                {
+                    eprintln!("Could not create containing directory: {err}");
+                };
                 let (task, rx) = http::start_download(path);
                 self.task = Some(task);
                 self.rx = Some(rx);
