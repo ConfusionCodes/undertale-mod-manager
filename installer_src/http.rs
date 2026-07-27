@@ -110,7 +110,7 @@ async fn download(url: &str, path: &Path, asset_size: u64, tx: Sender<f32>) -> R
     }
     let mut downloaded: u64 = 0;
     let mut log = File::create(path.join("log.txt")).await?;
-    let mut file = File::create(path.join("undertale_mod_manager.exe.download")).await?;
+    let mut file = File::create(path.join(crate::TEMP_EXE_NAME)).await?;
     let mut buffer = [0_u8; CHUNK_SIZE];
     loop {
         let bytes_len = response.read(&mut buffer).await?;
