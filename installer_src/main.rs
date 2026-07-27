@@ -16,6 +16,7 @@ const WINDOW_SIZE: Vec2 = Vec2::new(600.0, 400.0);
 const SUBFOLDER_NAME: &str = "UndertaleModManager";
 pub const TEMP_EXE_NAME: &str = "undertale_mod_manager.exe.downloading";
 const EXE_NAME: &str = "undertale_mod_manager.exe";
+const SHORTCUT_NAME: &str = "Undertale Mod Manager.lnk";
 
 #[derive(Debug)]
 struct InstallerState {
@@ -23,19 +24,18 @@ struct InstallerState {
     task: Option<Task<Result<(), http::Error>>>,
     progress: f32,
 
+    initial_install_path: String,
+    desktop_path: Option<PathBuf>,
+
     create_shortcut: bool,
     change_install_path: bool,
     install_path: String,
-    initial_install_path: String,
     already_installed: bool,
     install_error: String,
 }
 impl InstallerState {
     fn new(cc: &eframe::CreationContext) -> Box<Self> {
-        let default_path = std::env::var_os("APPDATA")
-            .or(std::env::var_os("LOCALAPPDATA"))
-            .map(PathBuf::from)
-            .or(std::env::home_dir());
+        let default_path = dirs::data_dir();
         let mut initial_path =
             default_path.map_or(String::new(), |p| p.to_string_lossy().into_owned());
         if !initial_path.is_empty() {
@@ -51,10 +51,12 @@ impl InstallerState {
             task: None,
             progress: 0.0,
 
+            initial_install_path: initial_path.clone(),
+            desktop_path: dirs::desktop_dir(),
+
             create_shortcut: true,
             change_install_path: initial_path.is_empty(),
-            install_path: initial_path.clone(),
-            initial_install_path: initial_path,
+            install_path: initial_path,
             already_installed: false,
             install_error: String::new(),
         })
@@ -81,7 +83,9 @@ impl App for InstallerState {
 
             ui.label(text::WELCOME);
             ui.add_space(16.0);
-            ui.checkbox(&mut self.create_shortcut, text::SHORTCUT);
+            if self.desktop_path.is_some() {
+                ui.checkbox(&mut self.create_shortcut, text::SHORTCUT);
+            }
             ui.add_space(16.0);
             if !self.initial_install_path.is_empty() {
                 ui.checkbox(&mut self.change_install_path, text::CHANGE_INSTALL_PATH);
@@ -173,14 +177,19 @@ fn handle_install(state: &mut InstallerState, ui: &mut egui::Ui) -> bool {
                 state.install_error = format!("Failed to install the mod manager: {err}");
                 return false;
             }
-
+            let exe_path = Path::new(&state.install_path).join(EXE_NAME);
             let result = std::fs::rename(
                 Path::new(&state.install_path).join(TEMP_EXE_NAME),
-                Path::new(&state.install_path).join(EXE_NAME),
+                exe_path.clone(),
             );
             if let Err(err) = result {
                 state.install_error = format!("Failed to install the mod manager: {err}");
                 return false;
+            }
+
+            if let Some(ref desktop_path) = state.desktop_path {
+                let link = mslnk::ShellLink::new(exe_path).unwrap();
+                link.create_lnk(desktop_path.join(SHORTCUT_NAME)).unwrap();
             }
             return false;
         }
