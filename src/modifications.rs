@@ -45,7 +45,6 @@ impl Program {
             .unwrap_or(exe_name)
             .to_string_lossy()
             .into_owned();
-        println!("{name}");
         let program = Self {
             name,
             exe_name: PathBuf::from(exe_name),
@@ -83,13 +82,13 @@ impl Program {
         Ok(())
     }
     fn load(path: &Path, paths: &FileManager) -> Result<Program, files::Error> {
-        let path = paths.instance_config_for(path);
+        let path = paths.get_or_create_instance_config(path);
 
         let string = fs::read_to_string(path).map_err(files::Error::Read)?;
         Ok(toml::from_str(&string)?)
     }
     pub fn save(&self, paths: &FileManager) -> Result<(), files::Error> {
-        let path = paths.instance_config_for(&self.path);
+        let path = paths.get_or_create_instance_config(&self.path);
         let string = toml::to_string(self)?;
         fs::write(path, string).map_err(files::Error::Write)
     }

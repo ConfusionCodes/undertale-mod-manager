@@ -218,7 +218,9 @@ fn add_mod_menu(state: &mut ModManager, ui: &mut Ui) {
                         state.mods.push(program);
                         state.add_menu_open = false;
                     }
-                    Err(err) => println!("Program Failed: {err}"),
+                    Err(err) => {
+                        println!("Program Failed for path ({}): {err}", exe_path.display())
+                    }
                 },
                 Err(err) => println!("path failed: {err}"),
             }

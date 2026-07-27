@@ -136,8 +136,17 @@ impl FileManager {
         }
         path
     }
-    pub fn instance_config_for(&self, mod_path: &Path) -> PathBuf {
-        self.mod_dir.join(mod_path).join(self.instance_config)
+    pub fn get_or_create_instance_config(&self, mod_path: &Path) -> PathBuf {
+        let path = self.mod_dir.join(mod_path).join(self.instance_config);
+        if let Some(parent) = path.parent()
+            && !parent.exists()
+        {
+            //
+            if let Err(err) = fs::create_dir_all(parent) {
+                eprintln!("Faied to create directory '{}': {err}", parent.display());
+            }
+        }
+        path
     }
 }
 impl Default for FileManager {
@@ -148,7 +157,7 @@ impl Default for FileManager {
 
 impl FileManager {
     pub fn get_image(path: &str) -> ImageSource<'_> {
-        format!("file://{path}").into()
+        format!("file:///{path}").into()
     }
 
     pub fn show_icon_dir(&self) {
