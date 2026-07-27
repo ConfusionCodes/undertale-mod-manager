@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 
 use eframe::egui::{
-    Align2, Area, Button, CentralPanel, Color32, Frame, Grid, Image, Key, Layout, Margin, Order,
-    Panel, ProgressBar, ScrollArea, Sense, Shadow, TextEdit, TextStyle, Ui, Vec2, Widget,
+    Align2, Area, Button, CentralPanel, Color32, Frame, Grid, Image, Key, Margin, Order, Panel,
+    ProgressBar, ScrollArea, Sense, Shadow, TextEdit, TextStyle, Ui, Vec2, Widget,
 };
 use egui::{Separator, Stroke};
 
@@ -31,7 +31,7 @@ impl Screen {
 pub fn loading(state: &mut ModManager, ui: &mut Ui, _frame: &mut eframe::Frame) {
     CentralPanel::default_margins()
         .frame(Frame::new().fill(Color32::BLACK))
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             Area::new("loading_content".into())
                 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
                 .show(ui.ctx(), |ui| {
@@ -72,7 +72,7 @@ pub fn home(state: &mut ModManager, ui: &mut Ui, _frame: &mut eframe::Frame) {
                 })
                 .inner_margin(Margin::same(8)),
         )
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             if ui.button("Add Mod").clicked() {
                 state.add_menu_open = true;
             } else if state.add_menu_open {
@@ -94,7 +94,7 @@ pub fn home(state: &mut ModManager, ui: &mut Ui, _frame: &mut eframe::Frame) {
                 })
                 .inner_margin(Margin::same(16)),
         )
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             if let Some(selected_index) = state.selected_index {
                 ui.vertical_centered(|ui| {
                     let selected_mod = &mut state.mods[selected_index];
@@ -171,7 +171,7 @@ pub fn home(state: &mut ModManager, ui: &mut Ui, _frame: &mut eframe::Frame) {
                 .fill(Color32::BLACK)
                 .inner_margin(Margin::same(8)),
         )
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             let rect = ui.max_rect();
             let bg_response = ui.interact(rect, "mod_panel_bg".into(), Sense::click());
             Grid::new("mod_panel").show(ui, |ui| {

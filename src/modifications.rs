@@ -73,7 +73,7 @@ impl Program {
         config
             .instances
             .iter()
-            .map(|path| Self::load(path, &paths))
+            .map(|path| Self::load(path, paths))
             .collect()
     }
     pub fn save_all(programs: &[Self], paths: &FileManager) -> Result<(), files::Error> {

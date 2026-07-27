@@ -248,7 +248,7 @@ impl FileManager {
         match extension.as_str() {
             "exe" => Ok(path.to_path_buf()),
             "lnk" => Self::exe_from_shortcut(path),
-            "zip" => Self::exe_from_zip(path),
+            // "zip" => Self::exe_from_zip(path),
             x => Err(Error::UnrecognizedExtension(x.to_owned())),
         }
     }
