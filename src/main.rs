@@ -1,4 +1,4 @@
-// #![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 use std::{
     fs,
@@ -11,6 +11,7 @@ use eframe::{
     App, CreationContext, NativeOptions,
     egui::{Color32, FontData, FontDefinitions, FontFamily},
 };
+use egui::ViewportBuilder;
 
 use crate::{
     files::{AtomicProgress, ConfigFile, FileManager, Progress},
@@ -161,9 +162,13 @@ impl App for ModManager {
 }
 
 fn main() -> Result<(), eframe::Error> {
+    let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/logo.ico"));
     eframe::run_native(
         "Undertale Mod Manager",
-        NativeOptions::default(),
+        NativeOptions {
+            viewport: ViewportBuilder::default().with_icon(icon.unwrap_or_default()),
+            ..NativeOptions::default()
+        },
         Box::new(|cc| Ok(ModManager::new(cc))),
     )
 }

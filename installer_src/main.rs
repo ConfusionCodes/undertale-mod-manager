@@ -212,7 +212,7 @@ fn handle_install(state: &mut InstallerState, ui: &mut egui::Ui) -> bool {
 }
 
 fn main() -> eframe::Result {
-    let icon = icon_data::from_png_bytes(include_bytes!("../assets/logo.png"));
+    let icon = icon_data::from_png_bytes(include_bytes!("../assets/logo.ico"));
     eframe::run_native(
         "Undertale Mod Manager Installer",
         NativeOptions {
