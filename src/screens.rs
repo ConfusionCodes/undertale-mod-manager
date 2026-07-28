@@ -209,7 +209,7 @@ fn add_mod_menu(state: &mut ModManager, ui: &mut Ui) {
                 println!("Could not resolve dropped file path.");
                 continue;
             };
-            let exe_path = FileManager::get_exe_path(path);
+            let exe_path = state.files.get_exe_path(path);
             match exe_path {
                 Ok(exe_path) => match Program::from_exe_path(&exe_path, &state.files) {
                     Ok(program) => {
@@ -222,7 +222,7 @@ fn add_mod_menu(state: &mut ModManager, ui: &mut Ui) {
                         println!("Program Failed for path ({}): {err}", exe_path.display())
                     }
                 },
-                Err(err) => println!("path failed: {err}"),
+                Err(err) => println!("Path failed: {err}"),
             }
         }
     });

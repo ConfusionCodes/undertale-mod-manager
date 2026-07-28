@@ -1,17 +1,17 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{self, read_dir},
+    fs::{self, File, read_dir},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
 use eframe::egui::{Color32, ImageSource};
 use fs_extra::dir::CopyOptions;
-use image::{GenericImageView, ImageReader, ImageResult};
 use lnk::ShellLink;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use zip::ZipArchive;
 
 pub type AtomicProgress = Arc<Mutex<Progress<Error>>>;
 
@@ -49,13 +49,17 @@ pub enum Error {
     Canonicalize(std::io::Error),
     #[error("Could not read image data: {0}")]
     MainColor(image::ImageError),
+    #[error("Could not parse zip file: {0}")]
+    Zip(#[from] zip::result::ZipError),
 
     #[error("Could not find Undertale within the default Steam directory.")]
     SteamNotFound,
     #[error("Could not find 'data.win'.")]
     DataWinNotFound,
     #[error("Could not find 'UNDERTALE.exe'")]
-    ExeNotFound,
+    VanillaExeNotFound,
+    #[error("Could not find .exe file in directory '{0}'.")]
+    ModExeNotFound(String),
     #[error("Could not list TEMP_DIRECTORY, despite mod {0} being found inside it.")]
     TempDirNotFound(String),
     #[error("Could not deserialize config file: {0}")]
@@ -136,6 +140,10 @@ impl FileManager {
         }
         path
     }
+    fn clear_temp_dir(&self) -> Result<(), Error> {
+        fs::remove_dir_all(self.temp_dir).map_err(Error::Delete)?;
+        fs::create_dir_all(self.temp_dir).map_err(Error::Create)
+    }
     pub fn get_or_create_instance_config(&self, mod_path: &Path) -> PathBuf {
         let path = self.mod_dir.join(mod_path).join(self.instance_config);
         if let Some(parent) = path.parent()
@@ -204,7 +212,7 @@ impl FileManager {
             Ok(bytes) => println!("Mod '{}' copied ({} bytes).", exe_path.display(), bytes),
             Err(err) => println!("Failed to copy mod {}: {}", exe_path.display(), err),
         }
-
+        self.clear_temp_dir()?;
         Ok(())
     }
     pub fn delete_mod(&self, instance_path: &Path) -> Result<(), Error> {
@@ -229,7 +237,7 @@ impl FileManager {
             return Err(Error::DataWinNotFound);
         }
         if !files.contains(&OsStr::new("UNDERTALE.exe").to_owned()) {
-            return Err(Error::ExeNotFound);
+            return Err(Error::VanillaExeNotFound);
         }
         Ok(())
     }
@@ -249,7 +257,7 @@ impl FileManager {
         Ok(())
     }
 
-    pub fn get_exe_path(path: &Path) -> Result<PathBuf, Error> {
+    pub fn get_exe_path(&self, path: &Path) -> Result<PathBuf, Error> {
         let extension = path
             .extension()
             .map(|x| x.to_string_lossy().into_owned())
@@ -257,7 +265,7 @@ impl FileManager {
         match extension.as_str() {
             "exe" => Ok(path.to_path_buf()),
             "lnk" => Self::exe_from_shortcut(path),
-            // "zip" => Self::exe_from_zip(path),
+            "zip" => self.exe_from_zip(path),
             x => Err(Error::UnrecognizedExtension(x.to_owned())),
         }
     }
@@ -272,8 +280,41 @@ impl FileManager {
 
         Ok(PathBuf::from(location))
     }
-    fn exe_from_zip(path: &Path) -> Result<PathBuf, Error> {
-        todo!()
+    fn exe_from_zip(&self, path: &Path) -> Result<PathBuf, Error> {
+        let file = File::open(path).map_err(Error::Read)?;
+        let mut file: ZipArchive<File> = ZipArchive::new(file)?;
+        let temp_file = self
+            .temp_dir
+            .join(path.file_stem().unwrap_or(OsStr::new("Undefined")));
+        fs::create_dir(&temp_file).map_err(Error::Create)?;
+        file.extract(&temp_file)?;
+        let files: Vec<PathBuf> = temp_file
+            .read_dir()
+            .map_err(Error::Read)?
+            .filter_map(Result::ok)
+            .map(|x| x.path())
+            .collect();
+        if let Some(exe) = files
+            .iter()
+            .find(|x| x.extension().is_some_and(|x| x == "exe"))
+        {
+            return Ok(exe.to_owned());
+        }
+        if let Some(dir) = dbg!(files.first()).map(|x| x.read_dir()) {
+            let mut dir = dir.map_err(Error::Read)?;
+            if let Some(exe) = dir.find_map(|x| {
+                x.ok()
+                    .map(|x| dbg!(x.path()))
+                    .filter(|x| dbg!(x.extension().is_some_and(|x| x == "exe")))
+            }) {
+                println!("Found EXE at lower level.");
+                return Ok(exe);
+            }
+        }
+        println!("dump: {files:?}");
+        Err(Error::ModExeNotFound(
+            temp_file.to_string_lossy().into_owned(),
+        ))
     }
 
     pub fn add_icon(&self, icon_path: &Path, config: &mut ConfigFile) -> Result<(), Error> {
